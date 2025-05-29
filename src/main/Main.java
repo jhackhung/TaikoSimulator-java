@@ -13,6 +13,7 @@ public class Main extends Application {
 
         primaryStage.setTitle("Taiko Simulator - JavaFX");
         primaryStage.setScene(scene);
+        engine.setupInput(scene);
         primaryStage.show();
 
         engine.start();
