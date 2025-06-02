@@ -1,24 +1,36 @@
 package com.binge;
+
 import javafx.application.Application;
 import javafx.scene.Scene;
-
-import javafx.scene.control.Button;
-import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
-public class Main extends Application {
-    @Override
-    public void start(Stage stage) throws Exception {
-        Button button = new Button("Hello, JavaFX");
-        BorderPane borderPane = new BorderPane();
-        borderPane.setCenter(button);
-        Scene scene = new Scene(borderPane, 300, 300);
-        stage.setScene(scene);
+import java.util.List;
 
-        stage.setTitle("Binge");
-        stage.show();
+public class Main extends Application {
+
+    @Override
+    public void start(Stage stage) {
+        try {
+            String song = "Zenryoku Shounen";
+            String diff = "Normal";
+
+            /* 解析譜面 */
+            List<NoteData> chart = TjaParser.parse(song + ".tja", diff);
+
+            /* 建立遊戲畫面 */
+            GamePane gamePane = new GamePane(chart, song);
+
+            Scene scene = new Scene(gamePane, 900, 400);
+            stage.setTitle("Taiko Simulator");
+            stage.setScene(scene);
+            stage.show();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
     public static void main(String[] args) {
-        Application.launch(Main.class, args);	//啟動JavaFX，自動呼叫start(Stage)
+        launch(args);
     }
 }
