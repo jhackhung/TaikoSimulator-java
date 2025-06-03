@@ -28,6 +28,8 @@ public class GameEngine {
 
     private Image bgImage = new Image("file:assets/game/bg_genre_2.jpg");
     private Image redNoteImage = new Image("file:assets/game/red_note.png");
+    private Image redBigNoteImage = new Image("file:assets/game/red_big.png");
+    private Image blueBigNoteImage = new Image("file:assets/game/blue_big.png");
     private Image blueNoteImage = new Image("file:assets/game/blue_note.png");
     private String fontPath = "file:assets/fonts/Taiko_No_Tatsujin_Official_Font.ttf";
     private Font font = Font.loadFont(fontPath, 24);
@@ -116,7 +118,16 @@ public class GameEngine {
     private void checkHit(int type) {
         if (drumQueue.isEmpty()) return;
         Drum drum = drumQueue.getFirst();
-        if (drum.getType() != type) return;
+
+        int drumType = drum.getType();
+        boolean hitMatched = false;
+        if (drumType == 1 || drumType == 3) { // 紅音符、小紅或大紅
+            if (type == 1) hitMatched = true;
+        } else if (drumType == 2 || drumType == 4) { // 藍音符、小藍或大藍
+            if (type == 2) hitMatched = true;
+        }
+
+        if (!hitMatched) return;
 
         double leftEdge = drum.getX();
         double rightEdge = drum.getX() + 64;
@@ -130,18 +141,22 @@ public class GameEngine {
             return; // Not in the hit zone
         }
 
+        // 基礎分數
+        int baseScore = 0;
         if (leftEdge >= perfectLeft && leftEdge <= perfectRight) {
+            baseScore = (drumType <= 2) ? 300 : 600;  // 大音符分數*2
             drumQueue.removeFirst();
             lastJudgement = "Perfect";
             judgementDisplayTime = System.currentTimeMillis();
             combo++;
-            score += 300 + combo * 2;
+            score += baseScore + combo * 2;
         } else if (leftEdge >= goodLeft && rightEdge <= goodRight) {
+            baseScore = (drumType <= 2) ? 100 : 200;
             drumQueue.removeFirst();
             lastJudgement = "Good";
             judgementDisplayTime = System.currentTimeMillis();
             combo++;
-            score += 100 + combo * 2;
+            score += baseScore + combo * 2;
         } else {
             drumQueue.removeFirst();
             lastJudgement = "Miss";
@@ -254,8 +269,17 @@ public class GameEngine {
         }
 
         for (Drum drum : drumQueue) {
-            Image img = drum.getType() == 1 ? redNoteImage : blueNoteImage;
-            gc.drawImage(img, drum.getX(), drum.getY());
+            Image img;
+            switch (drum.getType()) {
+                case 1: img = redNoteImage; break;
+                case 2: img = blueNoteImage; break;
+                case 3: img = redBigNoteImage; break;
+                case 4: img = blueBigNoteImage; break;
+                default: img = null;
+            }
+            if (img != null) {
+                gc.drawImage(img, drum.getX(), drum.getY());
+            }
         }
     }
 

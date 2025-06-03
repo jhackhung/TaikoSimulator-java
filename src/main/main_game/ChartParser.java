@@ -72,7 +72,7 @@ public class ChartParser {
                             char c = bar.charAt(i);
                             int type = c - '0';
 
-                            if (type == 1 || type == 2) {
+                            if (type == 1 || type == 2 || type == 3 || type == 4) {
                                 notes.add(new Note(type, currentTime));
                             }
 
