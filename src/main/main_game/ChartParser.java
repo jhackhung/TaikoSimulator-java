@@ -8,10 +8,11 @@ public class ChartParser {
     public static double bpm = 120.0;
     public static double offset = 0.0;
 
-    public static void parse(String path, ArrayList<Note> notes) throws IOException {
+    public static void parse(String path, ArrayList<Note> notes, String course) throws IOException {
 
+        course = course.trim().toLowerCase();
         double measure = 4.0, curSec = 0.0;
-        boolean started = false;
+        boolean inCourse = false, started = false;
 
         try (BufferedReader br = new BufferedReader(new FileReader(path))) {
             String ln;
@@ -21,6 +22,13 @@ public class ChartParser {
 
                 if (ln.startsWith("OFFSET:")) offset = Double.parseDouble(ln.substring(7).trim());
                 if (ln.startsWith("BPM:")) bpm = Double.parseDouble(ln.substring(4).trim());
+                if (ln.startsWith("COURSE:")) {
+                    inCourse = ln.substring(7).trim().equalsIgnoreCase(course);
+                    started  = false;  curSec = 0;
+                    continue;
+                }
+                if (!inCourse) continue;
+
                 if (ln.startsWith("#MEASURE")) {
                     String[] p = ln.substring(8).trim().split("/");
                     measure = Double.parseDouble(p[0]) / Double.parseDouble(p[1]);

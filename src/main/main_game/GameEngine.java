@@ -67,7 +67,7 @@ public class GameEngine {
     public GameEngine() {
         root.getChildren().add(canvas);
         try {
-            ChartParser.parse("assets/game/yoasobi.txt", notes);
+            ChartParser.parse("assets/game/yoasobi.txt", notes, "Easy");
         } catch (Exception e) {
             e.printStackTrace();
         }
