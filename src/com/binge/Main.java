@@ -12,7 +12,7 @@ public class Main extends Application {
     public void start(Stage stage) {
         try {
             String song = "Zenryoku Shounen";
-            String diff = "Normal";
+            String diff = "Easy";
 
             /* 解析譜面 */
             List<NoteData> chart = TjaParser.parse(song + ".tja", diff);

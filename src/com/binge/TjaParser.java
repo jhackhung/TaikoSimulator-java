@@ -63,16 +63,22 @@ public class TjaParser {
 
     private static String convert(String s) {
         StringBuilder out = new StringBuilder();
-        boolean roll = false; int toggle = 0;
+        boolean roll = false;
+
         for (char c : s.toCharArray()) {
             if (roll) {
-                if      (c == '0') out.append(toggle++ % 2 == 0 ? '1' : '2');
-                else if (c == '8') roll = false;
-                else               out.append('0');
+                if (c == '0') {
+                    out.append('0');
+                } else if (c == '8') {
+                    out.append('1');
+                    roll = false;
+                } else {
+                    out.append('0');
+                }
             } else {
                 switch (c) {
                     case '0','1','2','3','4' -> out.append(c);
-                    case '5' -> { roll = true; toggle = 0; out.append('1'); }
+                    case '5' -> { roll = true; out.append('1'); }
                     case '6' -> out.append('1');
                     case '7' -> out.append('2');
                     default  -> out.append('0');
