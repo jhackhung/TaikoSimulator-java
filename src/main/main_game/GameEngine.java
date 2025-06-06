@@ -15,6 +15,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -51,6 +52,8 @@ public class GameEngine {
     private boolean gameStarted = false;
     private int currentNoteIndex = 0;
     private boolean musicActuallyPlaying = false;
+    private double noteAppearLeadTime;  // 預留提前時間 (秒)
+
 
     private long lastUpdateTime = 0;
 
@@ -63,7 +66,11 @@ public class GameEngine {
 
     public GameEngine() {
         root.getChildren().add(canvas);
-        ChartParser.parse("assets/game/yoasobi.txt", notes);
+        try {
+            ChartParser.parse("assets/game/yoasobi.txt", notes);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         bpm = ChartParser.bpm;
         offset = ChartParser.offset;
         loadSounds();
@@ -92,6 +99,7 @@ public class GameEngine {
         double secondsPerBeat = 60.0 / bpm;
         double timeToReach = travelBeats * secondsPerBeat;
         noteSpeed = travelDistance / timeToReach;
+        noteAppearLeadTime = timeToReach;
         System.out.printf("noteSpeed: %.4f px/sec (travel %.1f px in %.2f sec)\n", noteSpeed, travelDistance, timeToReach);
     }
 
@@ -129,13 +137,21 @@ public class GameEngine {
 
         if (!hitMatched) return;
 
+        double noteWidth = (drumType <= 2) ? 56 : 90;
         double leftEdge = drum.getX();
-        double rightEdge = drum.getX() + 64;
+        double rightEdge = drum.getX() + noteWidth;
+        double centerX = (leftEdge + rightEdge) / 2;
 
-        double perfectLeft = (hitX - 96);
-        double perfectRight = (hitX - 64);
-        double goodLeft = (hitX - 135);
-        double goodRight = (hitX + 45);
+        double perfectLeft, perfectRight, goodLeft, goodRight;
+
+        perfectLeft = hitX - 32;
+        perfectRight = hitX + 32;
+        goodLeft = hitX - 64;
+        goodRight = hitX + 64;
+
+        System.out.println("Checking hit: " + type + " on drum type " + drumType + " at X=" + drum.getX() + " | ");
+        System.out.println("Left Edge: " + leftEdge + ", Right Edge: " + rightEdge);
+        System.out.println("HitX: "+ hitX + "," + "Hit zones: Perfect [" + perfectLeft + ", " + perfectRight + "], Good [" + goodLeft + ", " + goodRight + "]");
 
         if (leftEdge > goodRight + 32) {
             return; // Not in the hit zone
@@ -143,14 +159,15 @@ public class GameEngine {
 
         // 基礎分數
         int baseScore = 0;
-        if (leftEdge >= perfectLeft && leftEdge <= perfectRight) {
+
+        if (centerX >= perfectLeft && centerX <= perfectRight) {
             baseScore = (drumType <= 2) ? 300 : 600;  // 大音符分數*2
             drumQueue.removeFirst();
             lastJudgement = "Perfect";
             judgementDisplayTime = System.currentTimeMillis();
             combo++;
             score += baseScore + combo * 2;
-        } else if (leftEdge >= goodLeft && rightEdge <= goodRight) {
+        } else if (centerX >= goodLeft && centerX <= goodRight) {
             baseScore = (drumType <= 2) ? 100 : 200;
             drumQueue.removeFirst();
             lastJudgement = "Good";
@@ -180,7 +197,7 @@ public class GameEngine {
 
                 double delayElapsed = (now - delayStartTime) / 1e9;
 
-                if (!gameStarted && delayElapsed >= offset) {
+                if (!gameStarted && delayElapsed >= 0) {
                     gameStarted = true;
                     if (bgPlayer != null) {
                         bgPlayer.stop();
@@ -213,10 +230,14 @@ public class GameEngine {
     }
 
     private void spawnNotes() {
-        while (currentNoteIndex < notes.size() && currentTime >= notes.get(currentNoteIndex).getTime()) {
+        while (currentNoteIndex < notes.size() && currentTime >= notes.get(currentNoteIndex).getTime() - noteAppearLeadTime) {
             Note note = notes.get(currentNoteIndex);
             if (note.getType() != 0) {
-                drumQueue.add(new Drum(note.getType(), 1280, 200));
+                if (note.getType() == 1 || note.getType() == 2) {
+                    drumQueue.add(new Drum(note.getType(), 1280, 225));
+                } else if (note.getType() == 3 || note.getType() == 4) {
+                    drumQueue.add(new Drum(note.getType(), 1280, 200));
+                }
             }
             currentNoteIndex++;
         }
@@ -251,6 +272,16 @@ public class GameEngine {
 //        gc.strokeRect(hitX - 32, 200 + 55 - 32, 64, 64); // Perfect zone
 //        gc.setStroke(Color.ORANGE);
 //        gc.strokeRect(hitX - 45, 200 + 55 - 45, 90, 90); // Good zone
+
+        // 畫出小音符的判定區域 (紅色)
+//        gc.setStroke(Color.RED);
+//        gc.setLineWidth(2);
+//        double perfectLeftSmall = hitX - 32;
+//        double perfectRightSmall = hitX + 32;
+//        double goodLeftSmall = hitX - 45;
+//        double goodRightSmall = hitX + 64;
+//        gc.strokeRect(perfectLeftSmall, 200, perfectRightSmall - perfectLeftSmall, 64);
+//        gc.strokeRect(goodLeftSmall, 200, goodRightSmall - goodLeftSmall, 64);
 
         gc.setFill(Color.WHITE);
         gc.setFont(font);

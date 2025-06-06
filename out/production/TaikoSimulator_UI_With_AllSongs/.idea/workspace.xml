@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="6c7b691a-f9b0-41ec-9487-cb430bf1e649" name="Changes" comment="feat: enhance ChartParser and GameEngine for improved note handling and audio playback">
+      <change beforePath="$PROJECT_DIR$/src/Main/DifficultyScreen.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Main/DifficultyScreen.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Main/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Main/Main.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Main/MenuScreen.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Main/MenuScreen.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Main/ResultScreen.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Main/ResultScreen.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Main/StartScreen.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/Main/StartScreen.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Main/TaikoSimulator_UI_With_AllSongs.iml" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;jhackhung&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/jhackhung/TaikoSimulator-java.git&quot;,
+    &quot;accountId&quot;: &quot;9c42a274-216d-44b9-9115-5a03082d9a9a&quot;
+  }
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="2xVc7hLxKGbRcrnDfKgIj8Jxrr3" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.Main.executor": "Run",
+    "Application.com.binge.Main.executor": "Run",
+    "Application.main.Main.executor": "Run",
+    "Application.src.main.Main.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "dart.analysis.tool.window.visible": "false",
+    "git-widget-placeholder": "javafx",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "C:/Users/User/IdeaProjects/TaikoSimulator/assets/main",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\User\IdeaProjects\TaikoSimulator\assets\main" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\User\IdeaProjects\TaikoSimulator\src\Main" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Application.main.Main">
+    <configuration name="Main" type="Application" factoryName="Application">
+      <option name="MAIN_CLASS_NAME" value="com.binge.Main" />
+      <module name="TaikoSimulator" />
+      <option name="VM_PARAMETERS" value="--module-path=&quot;C:\Program Files\Java\javafx-sdk-21.0.7\lib&quot; --add-modules=javafx.controls,javafx.fxml --add-modules javafx.controls,javafx.fxml,javafx.media --add-opens javafx.base/com.sun.javafx=ALL-UNNAMED --add-opens javafx.graphics/com.sun.javafx.stage=ALL-UNNAMED --add-opens javafx.graphics/com.sun.glass.utils=ALL-UNNAMED --add-opens javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED " />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="main.Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="main.Main" />
+      <module name="TaikoSimulator_UI_With_AllSongs" />
+      <option name="VM_PARAMETERS" value="--module-path=&quot;C:\Program Files\Java\javafx-sdk-21.0.7\lib&quot; --add-modules=javafx.controls,javafx.fxml --add-modules javafx.controls,javafx.fxml,javafx.media --add-opens javafx.base/com.sun.javafx=ALL-UNNAMED --add-opens javafx.graphics/com.sun.javafx.stage=ALL-UNNAMED --add-opens javafx.graphics/com.sun.glass.utils=ALL-UNNAMED --add-opens javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED " />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="main.main_game.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="src.main.Main" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
+      <option name="MAIN_CLASS_NAME" value="src.main.Main" />
+      <module name="TaikoSimulator_UI_With_AllSongs" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="src.main.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <list>
+      <item itemvalue="Application.Main" />
+      <item itemvalue="Application.main.Main" />
+      <item itemvalue="Application.src.main.Main" />
+    </list>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.main.Main" />
+        <item itemvalue="Application.src.main.Main" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="6c7b691a-f9b0-41ec-9487-cb430bf1e649" name="Changes" comment="" />
+      <created>1748026517709</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1748026517709</updated>
+    </task>
+    <task id="LOCAL-00001" summary="feat: initial implementation of game engine with note parsing and audio handling">
+      <option name="closed" value="true" />
+      <created>1748230596456</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1748230596456</updated>
+    </task>
+    <task id="LOCAL-00002" summary="feat: enhance ChartParser and GameEngine for improved note handling and audio playback">
+      <option name="closed" value="true" />
+      <created>1748526922003</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1748526922003</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <ignored-roots>
+      <path value="$PROJECT_DIR$/.." />
+    </ignored-roots>
+    <MESSAGE value="feat: initial implementation of game engine with note parsing and audio handling" />
+    <MESSAGE value="feat: enhance ChartParser and GameEngine for improved note handling and audio playback" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat: enhance ChartParser and GameEngine for improved note handling and audio playback" />
+  </component>
+</project>

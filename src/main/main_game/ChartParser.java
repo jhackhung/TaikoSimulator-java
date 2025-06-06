@@ -1,88 +1,103 @@
 package main.main_game;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.util.ArrayList;
+import java.io.*;
+import java.util.*;
 
 public class ChartParser {
+
     public static double bpm = 120.0;
-    public static double offset = 3.0;
+    public static double offset = 0.0;
 
-    public static void parse(String path, ArrayList<Note> notes) {
+    public static void parse(String path, ArrayList<Note> notes) throws IOException {
+
+        double measure = 4.0, curSec = 0.0;
+        boolean started = false;
+
         try (BufferedReader br = new BufferedReader(new FileReader(path))) {
-            String line;
-            boolean inNote = false;
-            double currentTime = 0.0;
+            String ln;
+            while ((ln = br.readLine()) != null) {
+                ln = ln.trim();
+                if (ln.isEmpty() || ln.startsWith("//")) continue;
 
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
+                if (ln.startsWith("OFFSET:")) offset = Double.parseDouble(ln.substring(7).trim());
+                if (ln.startsWith("BPM:")) bpm = Double.parseDouble(ln.substring(4).trim());
+                if (ln.startsWith("#MEASURE")) {
+                    String[] p = ln.substring(8).trim().split("/");
+                    measure = Double.parseDouble(p[0]) / Double.parseDouble(p[1]);
+                } else if (ln.startsWith("#BPMCHANGE")) bpm = Double.parseDouble(ln.substring(10).trim());
+                else if (ln.startsWith("#DELAY")) curSec += Double.parseDouble(ln.substring(6).trim());
+                else if (ln.equals("#START")) {
+                    started = true;
+                    continue;
+                } else if (ln.equals("#END")) break;
 
-                if (line.isEmpty()) continue;
+                if (started && ln.endsWith(",")) {
+                    String raw = ln.substring(0, ln.length() - 1);
+                    String data = convert(raw);
 
-                if (line.startsWith("BPM:")) {
-                    bpm = Double.parseDouble(line.substring(4).trim());
-                    System.out.println("BPM set to: " + bpm);
-                } else if (line.startsWith("OFFSET:")) {
-                    offset = Double.parseDouble(line.substring(7).trim());
-                    System.out.println("Offset set to: " + offset);
-                } else if (line.equals("#START")) {
-                    inNote = true;
-                    currentTime = 0.0;
-                } else if (line.equals("#END")) {
-                    break;
-                } else if (inNote) {
-                    // 拆成多個小節（以逗號為單位），每個小節必須獨立處理
-                    String[] bars = line.split(",");
+                    double secPerBeat = 60d / bpm;
+                    double secPerMeasure = measure * secPerBeat;
+                    double interval = secPerMeasure / data.length();
 
-                    if (line.startsWith("#")) {
-                        // 如果是註解行，則跳過
-                        continue;
-                    }
-
-                    if (line.startsWith(",") && bars.length == 0) {
-                        // 每一拍的秒數
-                        double beatTime = 60.0 / bpm;
-                        // 每一小節為 4 拍
-                        double barTime = 4 * beatTime;
-
-                        // 空小節也需計入時間
-                        currentTime += barTime;
-                        continue;
-
-                    }
-
-                    for (String bar : bars) {
-                        bar = bar.trim();
-                        int length = bar.length();
-
-                        // 每一拍的秒數
-                        double beatTime = 60.0 / bpm;
-                        // 每一小節為 4 拍
-                        double barTime = 4 * beatTime;
-
-                        if (length == 0) {
-                            // 空小節也需計入時間
-                            currentTime += barTime;
-                            continue;
-                        }
-
-                        double interval = barTime / length;
-
-                        for (int i = 0; i < length; i++) {
-                            char c = bar.charAt(i);
-                            int type = c - '0';
-
-                            if (type == 1 || type == 2 || type == 3 || type == 4) {
-                                notes.add(new Note(type, currentTime));
-                            }
-
-                            currentTime += interval;
+                    for (int i = 0; i < data.length(); i++) {
+                        char c = data.charAt(i);
+                        int type = mapType(c);
+                        if (type != 0) {
+                            notes.add(new Note(type, curSec + i * interval));
                         }
                     }
+
+                    curSec += secPerMeasure;
+                    measure = 4.0;
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
+
+        // 扣掉 offset (注意: tja 的 offset 是負的代表往後推)
+        for (Note n : notes) {
+            n.time -= offset;
+        }
+    }
+
+    private static int mapType(char c) {
+        switch (c) {
+            case '1':
+                return 1;  // 小紅
+            case '2':
+                return 2;  // 小藍
+            case '3':
+                return 3;  // 大紅
+            case '4':
+                return 4;  // 大藍
+            default:
+                return 0;
+        }
+    }
+
+    // 對 5, 6, 7, 8 做簡單轉換 (模擬連打，但你目前先略過連打，直接轉 1/2)
+    private static String convert(String s) {
+        StringBuilder out = new StringBuilder();
+        boolean roll = false;
+        int toggle = 0;
+        for (char c : s.toCharArray()) {
+            if (roll) {
+                if (c == '0') out.append(toggle++ % 2 == 0 ? '1' : '2');
+                else if (c == '8') roll = false;
+                else out.append('0');
+            } else {
+                switch (c) {
+                    case '0', '1', '2', '3', '4' -> out.append(c);
+                    case '5' -> {
+                        roll = true;
+                        toggle = 0;
+                        out.append('1');
+                    }
+                    case '6' -> out.append('1');
+                    case '7' -> out.append('2');
+                    default -> out.append('0');
+                }
+            }
+        }
+        return out.toString();
     }
 }
