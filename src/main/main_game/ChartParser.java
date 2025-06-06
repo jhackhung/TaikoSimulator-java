@@ -24,7 +24,8 @@ public class ChartParser {
                 if (ln.startsWith("BPM:")) bpm = Double.parseDouble(ln.substring(4).trim());
                 if (ln.startsWith("COURSE:")) {
                     inCourse = ln.substring(7).trim().equalsIgnoreCase(course);
-                    started  = false;  curSec = 0;
+                    started = false;
+                    curSec = 0;
                     continue;
                 }
                 if (!inCourse) continue;
@@ -61,28 +62,19 @@ public class ChartParser {
             }
         }
 
-        // 扣掉 offset (注意: tja 的 offset 是負的代表往後推)
-        for (Note n : notes) {
-            n.time -= offset;
-        }
+        for (Note n : notes) n.time -= offset;
     }
 
     private static int mapType(char c) {
-        switch (c) {
-            case '1':
-                return 1;  // 小紅
-            case '2':
-                return 2;  // 小藍
-            case '3':
-                return 3;  // 大紅
-            case '4':
-                return 4;  // 大藍
-            default:
-                return 0;
-        }
+        return switch (c) {
+            case '1' -> 1;
+            case '2' -> 2;
+            case '3' -> 3;
+            case '4' -> 4;
+            default -> 0;
+        };
     }
 
-    // 對 5, 6, 7, 8 做簡單轉換 (模擬連打，但你目前先略過連打，直接轉 1/2)
     private static String convert(String s) {
         StringBuilder out = new StringBuilder();
         boolean roll = false;

@@ -8,7 +8,11 @@ import main.main_game.GameEngine;
 public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
-        GameEngine engine = new GameEngine();
+        String tjaPath = "assets/music/Zenryoku Shounen.tja";
+        String musicPath = "assets/music/Zenryoku Shounen.wav";
+        String course = "Normal";
+
+        GameEngine engine = new GameEngine(tjaPath, musicPath, course);
         Scene scene = new Scene(engine.getRoot(), 1280, 720);
 
         primaryStage.setTitle("Taiko Simulator - JavaFX");
