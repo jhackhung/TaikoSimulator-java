@@ -2,7 +2,7 @@ package main.main_game;
 
 public class Note {
     private final int type; // 1 = red, 2 = blue
-    private final double time;
+    double time;
 
     public Note(int type, double time) {
         this.type = type;

@@ -13,8 +13,10 @@ import javafx.scene.media.MediaPlayer;
 import javafx.scene.media.AudioClip;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.TextAlignment;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
@@ -28,6 +30,8 @@ public class GameEngine {
 
     private Image bgImage = new Image("file:assets/game/bg_genre_2.jpg");
     private Image redNoteImage = new Image("file:assets/game/red_note.png");
+    private Image redBigNoteImage = new Image("file:assets/game/red_big.png");
+    private Image blueBigNoteImage = new Image("file:assets/game/blue_big.png");
     private Image blueNoteImage = new Image("file:assets/game/blue_note.png");
     private String fontPath = "file:assets/fonts/Taiko_No_Tatsujin_Official_Font.ttf";
     private Font font = Font.loadFont(fontPath, 24);
@@ -49,6 +53,8 @@ public class GameEngine {
     private boolean gameStarted = false;
     private int currentNoteIndex = 0;
     private boolean musicActuallyPlaying = false;
+    private double noteAppearLeadTime;  // 預留提前時間 (秒)
+
 
     private long lastUpdateTime = 0;
 
@@ -59,12 +65,17 @@ public class GameEngine {
     private String lastJudgement = "";
     private long judgementDisplayTime = 0;
 
-    public GameEngine() {
+    public GameEngine(String tjaPath, String musicPath, String course) {
         root.getChildren().add(canvas);
-        ChartParser.parse("assets/game/yoasobi.txt", notes);
+
+        try {
+            ChartParser.parse(tjaPath, notes, course);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         bpm = ChartParser.bpm;
         offset = ChartParser.offset;
-        loadSounds();
+        loadSounds(musicPath);
         calculateNoteSpeed();
     }
 
@@ -72,12 +83,12 @@ public class GameEngine {
         return root;
     }
 
-    private void loadSounds() {
+    private void loadSounds(String musicPath) {
         redClipFX = new AudioClip(new File("assets/main/rednote.wav").toURI().toString());
         blueClipFX = new AudioClip(new File("assets/main/bluenote.wav").toURI().toString());
 
         try {
-            Media bgMusic = new Media(new File("assets/game/yoru_ni_kakeru.wav").toURI().toString());
+            Media bgMusic = new Media(new File(musicPath).toURI().toString());
             bgPlayer = new MediaPlayer(bgMusic);
         } catch (Exception e) {
             e.printStackTrace();
@@ -90,6 +101,7 @@ public class GameEngine {
         double secondsPerBeat = 60.0 / bpm;
         double timeToReach = travelBeats * secondsPerBeat;
         noteSpeed = travelDistance / timeToReach;
+        noteAppearLeadTime = timeToReach;
         System.out.printf("noteSpeed: %.4f px/sec (travel %.1f px in %.2f sec)\n", noteSpeed, travelDistance, timeToReach);
     }
 
@@ -115,41 +127,70 @@ public class GameEngine {
 
     private void checkHit(int type) {
         if (drumQueue.isEmpty()) return;
-        Drum drum = drumQueue.getFirst();
-        if (drum.getType() != type) return;
 
-        double leftEdge = drum.getX();
-        double rightEdge = drum.getX() + 64;
+        double perfectLeft = hitX - 32;
+        double perfectRight = hitX + 32;
+        double goodLeft = hitX - 64;
+        double goodRight = hitX + 64;
 
-        double perfectLeft = (hitX - 96);
-        double perfectRight = (hitX - 64);
-        double goodLeft = (hitX - 135);
-        double goodRight = (hitX + 45);
+        Iterator<Drum> iter = drumQueue.iterator();
 
-        if (leftEdge > goodRight + 32) {
-            return; // Not in the hit zone
+        while (iter.hasNext()) {
+            Drum drum = iter.next();
+            int drumType = drum.getType();
+
+            boolean hitMatched = false;
+            if (drumType == 1 || drumType == 3) { // 紅音符、小紅或大紅
+                if (type == 1) hitMatched = true;
+            } else if (drumType == 2 || drumType == 4) { // 藍音符、小藍或大藍
+                if (type == 2) hitMatched = true;
+            }
+
+            if (!hitMatched) return;
+
+            double noteWidth = (drumType <= 2) ? 56 : 90;
+            double leftEdge = drum.getX();
+            double rightEdge = drum.getX() + noteWidth;
+            double centerX = (leftEdge + rightEdge) / 2;
+
+//        System.out.println("Checking hit: " + type + " on drum type " + drumType + " at X=" + drum.getX() + " | ");
+//        System.out.println("Left Edge: " + leftEdge + ", Right Edge: " + rightEdge);
+//        System.out.println("HitX: "+ hitX + "," + "Hit zones: Perfect [" + perfectLeft + ", " + perfectRight + "], Good [" + goodLeft + ", " + goodRight + "]");
+
+            // 已經超過可判定範圍，當 miss 處理
+            if (centerX < goodLeft) {
+                iter.remove();
+                lastJudgement = "Miss";
+                judgementDisplayTime = System.currentTimeMillis();
+                combo = 0;
+                continue; // 繼續往後找下一顆
+            }
+
+            if (leftEdge > goodRight + 50) {
+                return; // Not in the hit zone
+            }
+
+            // 基礎分數
+            int baseScore = 0;
+
+            if (centerX >= perfectLeft && centerX <= perfectRight) {
+                baseScore = (drumType <= 2) ? 300 : 600;  // 大音符分數*2
+                drumQueue.removeFirst();
+                lastJudgement = "Perfect";
+                judgementDisplayTime = System.currentTimeMillis();
+                combo++;
+                score += baseScore + combo * 2;
+                break;
+            } else if (centerX >= goodLeft && centerX <= goodRight) {
+                baseScore = (drumType <= 2) ? 100 : 200;
+                drumQueue.removeFirst();
+                lastJudgement = "Good";
+                judgementDisplayTime = System.currentTimeMillis();
+                combo++;
+                score += baseScore + combo * 2;
+                break;
+            }
         }
-
-        if (leftEdge >= perfectLeft && leftEdge <= perfectRight) {
-            drumQueue.removeFirst();
-            lastJudgement = "Perfect";
-            judgementDisplayTime = System.currentTimeMillis();
-            combo++;
-            score += 300 + combo * 2;
-        } else if (leftEdge >= goodLeft && rightEdge <= goodRight) {
-            drumQueue.removeFirst();
-            lastJudgement = "Good";
-            judgementDisplayTime = System.currentTimeMillis();
-            combo++;
-            score += 100 + combo * 2;
-        } else {
-            drumQueue.removeFirst();
-            lastJudgement = "Miss";
-            judgementDisplayTime = System.currentTimeMillis();
-            combo = 0;
-            return;
-        }
-
         if (combo > maxCombo) maxCombo = combo;
     }
 
@@ -165,7 +206,7 @@ public class GameEngine {
 
                 double delayElapsed = (now - delayStartTime) / 1e9;
 
-                if (!gameStarted && delayElapsed >= offset) {
+                if (!gameStarted && delayElapsed >= 0) {
                     gameStarted = true;
                     if (bgPlayer != null) {
                         bgPlayer.stop();
@@ -198,10 +239,14 @@ public class GameEngine {
     }
 
     private void spawnNotes() {
-        while (currentNoteIndex < notes.size() && currentTime >= notes.get(currentNoteIndex).getTime()) {
+        while (currentNoteIndex < notes.size() && currentTime >= notes.get(currentNoteIndex).getTime() - noteAppearLeadTime) {
             Note note = notes.get(currentNoteIndex);
             if (note.getType() != 0) {
-                drumQueue.add(new Drum(note.getType(), 1280, 200));
+                if (note.getType() == 1 || note.getType() == 2) {
+                    drumQueue.add(new Drum(note.getType(), 1280, 225));
+                } else if (note.getType() == 3 || note.getType() == 4) {
+                    drumQueue.add(new Drum(note.getType(), 1280, 210));
+                }
             }
             currentNoteIndex++;
         }
@@ -237,25 +282,56 @@ public class GameEngine {
 //        gc.setStroke(Color.ORANGE);
 //        gc.strokeRect(hitX - 45, 200 + 55 - 45, 90, 90); // Good zone
 
+        // 畫出小音符的判定區域 (紅色)
+//        gc.setStroke(Color.RED);
+//        gc.setLineWidth(2);
+//        double perfectLeftSmall = hitX - 32;
+//        double perfectRightSmall = hitX + 32;
+//        double goodLeftSmall = hitX - 45;
+//        double goodRightSmall = hitX + 64;
+//        gc.strokeRect(perfectLeftSmall, 200, perfectRightSmall - perfectLeftSmall, 64);
+//        gc.strokeRect(goodLeftSmall, 200, goodRightSmall - goodLeftSmall, 64);
+
         gc.setFill(Color.WHITE);
+        gc.setTextAlign(TextAlignment.RIGHT);
         gc.setFont(font);
-        gc.fillText("" + score, 30, 210);
+        gc.fillText("" + score, 150, 210);
 
         if (combo > 10) {
             gc.setFill(Color.BLACK);
+            gc.setTextAlign(TextAlignment.CENTER);
             gc.setFont(Font.loadFont(fontPath, 36));
-            gc.fillText("" + combo, 230, 255);
+            gc.fillText("" + combo, 250, 255);
         }
 
         if (!lastJudgement.isEmpty() && System.currentTimeMillis() - judgementDisplayTime < 800) {
             gc.setFill(Color.WHITE);
-            gc.setFont(Font.font(36));
-            gc.fillText(lastJudgement, hitX - 30, 180);
+            gc.setTextAlign(TextAlignment.CENTER);
+            gc.setFont(Font.loadFont(fontPath, 24));
+            gc.fillText(lastJudgement, 450, 180);
         }
 
         for (Drum drum : drumQueue) {
-            Image img = drum.getType() == 1 ? redNoteImage : blueNoteImage;
-            gc.drawImage(img, drum.getX(), drum.getY());
+            Image img;
+            switch (drum.getType()) {
+                case 1:
+                    img = redNoteImage;
+                    break;
+                case 2:
+                    img = blueNoteImage;
+                    break;
+                case 3:
+                    img = redBigNoteImage;
+                    break;
+                case 4:
+                    img = blueBigNoteImage;
+                    break;
+                default:
+                    img = null;
+            }
+            if (img != null) {
+                gc.drawImage(img, drum.getX(), drum.getY());
+            }
         }
     }
 
