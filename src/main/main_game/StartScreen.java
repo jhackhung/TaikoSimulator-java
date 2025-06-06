@@ -10,6 +10,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.media.AudioClip;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -17,12 +18,24 @@ import javafx.util.Duration;
 
 public class StartScreen extends StackPane {
     private String fontPath = "file:assets/fonts/Taiko_No_Tatsujin_Official_Font.ttf";
+    private AudioClip titleSound, confirmSound, startSound;;
 
     public StartScreen(MainController controller) {
 
         ImageView bg = new ImageView(new Image("file:assets/main/start_bg.jpg"));
         bg.setFitWidth(controller.screenWidth);
         bg.setFitHeight(controller.screenHeight);
+
+        try {
+            titleSound = new AudioClip("file:assets/main/v_title.wav");
+            startSound = new AudioClip("file:assets/main/v_start.wav");
+            confirmSound = new AudioClip("file:assets/main/se_don.wav");
+            playTitleSound();
+        } catch (Exception e) {
+            System.err.println("Could not load sound: " + e.getMessage());
+            titleSound = null;
+            startSound = null;
+        }
 
         Label title = createOutlinedLabel("Taiko Simulator", 56, Color.rgb(229, 109, 50), Color.WHITE);
         Label subtitle = createOutlinedLabel("Press Enter or Click to Start", 36, Color.WHITE, Color.RED);
@@ -40,10 +53,16 @@ public class StartScreen extends StackPane {
 
         getChildren().addAll(bg, box);
 
-        setOnMouseClicked(e -> controller.showMenuScreen());
+        setOnMouseClicked(e -> {
+            playConfirmSound();
+            playStartSound();
+            controller.showMenuScreen();
+        });
 
         setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.ENTER) {
+                playConfirmSound();
+                playStartSound();
                 controller.showMenuScreen();
             }
         });
@@ -67,5 +86,25 @@ public class StartScreen extends StackPane {
         label.setEffect(outline);
 
         return label;
+    }
+
+    private void playTitleSound() {
+        if (titleSound != null) {
+            titleSound.play();
+        }
+    }
+
+    private void playConfirmSound() {
+        if (confirmSound != null) {
+            confirmSound.play(0.5);
+        }
+    }
+
+    private void playStartSound() {
+        if (startSound != null) {
+            startSound.play();
+        } else {
+            System.err.println("Start sound not loaded.");
+        }
     }
 }
