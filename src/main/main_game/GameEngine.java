@@ -61,11 +61,57 @@ public class GameEngine {
     private int score = 0;
     private int combo = 0;
     private int maxCombo = 0;
+    private int missCount = 0;
+    private int goodCount = 0;
+    private int perfectCount = 0;
 
     private String lastJudgement = "";
     private long judgementDisplayTime = 0;
 
-    public GameEngine(String tjaPath, String musicPath, String course) {
+    private MainController controller;
+    private AnimationTimer gameTimer;
+    private GameResult gameResult;
+
+    // 建立 GameResult 類來存儲遊戲結果
+    public static class GameResult {
+        private final int score;
+        private final int maxCombo;
+        private final int missCount;
+        private final int goodCount;
+        private final int perfectCount;
+
+        public GameResult(int score, int maxCombo, int missCount, int goodCount, int perfectCount) {
+            this.score = score;
+            this.maxCombo = maxCombo;
+            this.missCount = missCount;
+            this.goodCount = goodCount;
+            this.perfectCount = perfectCount;
+        }
+
+        public int getScore() {
+            return score;
+        }
+
+        public int getMaxCombo() {
+            return maxCombo;
+        }
+
+        public int getMissCount() {
+            return missCount;
+        }
+
+        public int getGoodCount() {
+            return goodCount;
+        }
+
+        public int getPerfectCount() {
+            return perfectCount;
+        }
+
+    }
+
+    public GameEngine(MainController controller, String tjaPath, String musicPath, String course) {
+        this.controller = controller;
         root.getChildren().add(canvas);
 
         try {
@@ -162,6 +208,7 @@ public class GameEngine {
                 iter.remove();
                 lastJudgement = "Miss";
                 judgementDisplayTime = System.currentTimeMillis();
+                missCount++;
                 combo = 0;
                 continue; // 繼續往後找下一顆
             }
@@ -178,6 +225,8 @@ public class GameEngine {
                 drumQueue.removeFirst();
                 lastJudgement = "Perfect";
                 judgementDisplayTime = System.currentTimeMillis();
+                if (drumType <= 2) perfectCount++;
+                else perfectCount += 2; // 大音符算兩個 Perfect
                 combo++;
                 score += baseScore + combo * 2;
                 break;
@@ -186,6 +235,8 @@ public class GameEngine {
                 drumQueue.removeFirst();
                 lastJudgement = "Good";
                 judgementDisplayTime = System.currentTimeMillis();
+                if (drumType <= 2) goodCount++;
+                else goodCount += 2; // 大音符算兩個 Good
                 combo++;
                 score += baseScore + combo * 2;
                 break;
@@ -195,7 +246,7 @@ public class GameEngine {
     }
 
     public void start() {
-        AnimationTimer timer = new AnimationTimer() {
+        gameTimer = new AnimationTimer() {
             @Override
             public void handle(long now) {
                 if (!delayStarted) {
@@ -233,9 +284,36 @@ public class GameEngine {
                 spawnNotes();
                 updateDrums(deltaTime);
                 render();
+
+                // 檢查是否所有音符都已處理完畢
+                if (currentNoteIndex >= notes.size() && drumQueue.isEmpty()) {
+                    handleGameEnd();
+                }
+            }
+
+            private void handleGameEnd() {
+                this.stop();
+                if (bgPlayer != null) {
+                    bgPlayer.stop();
+                }
+
+                // 創建遊戲結果對象
+                gameResult = new GameResult(score, maxCombo, missCount, goodCount, perfectCount);
+
+                // 延遲顯示結果畫面，給玩家一點時間看最後的畫面
+                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1.5));
+                delay.setOnFinished(e -> {
+                    controller.showResultScreen(gameResult);
+                });
+                delay.play();
             }
         };
-        timer.start();
+        gameTimer.start();
+    }
+
+    // 添加一個方法獲取遊戲結果
+    public GameResult getGameResult() {
+        return gameResult != null ? gameResult : new GameResult(score, maxCombo, missCount, goodCount, perfectCount);
     }
 
     private void spawnNotes() {
@@ -261,6 +339,7 @@ public class GameEngine {
                 iter.remove();
 //                lastJudgement = "Miss";
 //                judgementDisplayTime = System.currentTimeMillis();
+                missCount++;
                 combo = 0;
             }
         }
