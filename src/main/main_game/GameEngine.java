@@ -71,6 +71,7 @@ public class GameEngine {
     private MainController controller;
     private AnimationTimer gameTimer;
     private GameResult gameResult;
+    private boolean waitingForMusicToEnd = false;
 
     // 建立 GameResult 類來存儲遊戲結果
     public static class GameResult {
@@ -204,7 +205,7 @@ public class GameEngine {
 //        System.out.println("HitX: "+ hitX + "," + "Hit zones: Perfect [" + perfectLeft + ", " + perfectRight + "], Good [" + goodLeft + ", " + goodRight + "]");
 
             // 已經超過可判定範圍，當 miss 處理
-            if (centerX < goodLeft) {
+            if (centerX < goodLeft || (centerX > goodRight && centerX < goodRight + 50)) {
                 iter.remove();
                 lastJudgement = "Miss";
                 judgementDisplayTime = System.currentTimeMillis();
@@ -285,13 +286,31 @@ public class GameEngine {
                 updateDrums(deltaTime);
                 render();
 
-                // 檢查是否所有音符都已處理完畢
-                if (currentNoteIndex >= notes.size() && drumQueue.isEmpty()) {
-                    handleGameEnd();
+                if (currentNoteIndex >= notes.size() && drumQueue.isEmpty() && !waitingForMusicToEnd) {
+                    // 音符都處理完了，但還要等音樂播完
+                    waitingForMusicToEnd = true;
+
+                    // 添加音樂結束的監聽器
+                    if (bgPlayer != null) {
+                        bgPlayer.setOnEndOfMedia(() -> {
+                            handleGameEnd();
+                        });
+
+                        // 如果音樂已經結束了(可能音符比音樂還長)，直接結束遊戲
+                        if (bgPlayer.getStatus() == MediaPlayer.Status.STOPPED ||
+                                bgPlayer.getCurrentTime().greaterThanOrEqualTo(bgPlayer.getTotalDuration())) {
+                            handleGameEnd();
+                        }
+                    } else {
+                        // 如果沒有背景音樂，直接結束遊戲
+                        handleGameEnd();
+                    }
                 }
             }
 
             private void handleGameEnd() {
+                if (gameResult != null) return;
+
                 this.stop();
                 if (bgPlayer != null) {
                     bgPlayer.stop();
@@ -301,11 +320,9 @@ public class GameEngine {
                 gameResult = new GameResult(score, maxCombo, missCount, goodCount, perfectCount);
 
                 // 延遲顯示結果畫面，給玩家一點時間看最後的畫面
-                javafx.animation.PauseTransition delay = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1.5));
-                delay.setOnFinished(e -> {
-                    controller.showResultScreen(gameResult);
-                });
-                delay.play();
+
+                controller.showResultScreen(gameResult);
+
             }
         };
         gameTimer.start();
@@ -412,6 +429,29 @@ public class GameEngine {
                 gc.drawImage(img, drum.getX(), drum.getY());
             }
         }
+        drawControlHelp();
+    }
+
+    private void drawControlHelp() {
+        // 背景半透明矩形
+        gc.setFill(Color.rgb(0, 0, 0, 0.6));
+        gc.fillRoundRect(440, 590, 400, 90, 10, 10);
+
+        // 設置文字樣式
+        gc.setFill(Color.WHITE);
+        gc.setTextAlign(TextAlignment.CENTER);
+        gc.setFont(Font.loadFont(fontPath, 20));
+
+        // 繪製主標題
+        gc.fillText("Controls", 640, 615);
+
+        // 繪製紅色音符控制鍵
+        gc.setFill(Color.rgb(255, 100, 100));
+        gc.fillText("F / J : Red Notes", 640, 640);
+
+        // 繪製藍色音符控制鍵
+        gc.setFill(Color.rgb(100, 150, 255));
+        gc.fillText("D / K : Blue Notes", 640, 665);
     }
 
     static class Drum {

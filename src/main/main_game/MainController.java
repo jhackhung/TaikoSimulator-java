@@ -65,4 +65,11 @@ public class MainController {
         stage.setScene(scene);
         resultScreen.requestFocus();
     }
+
+    public String getSelectedSongName() {
+        return selectedSongName;
+    }
+    public String getSelectedDifficultyName() {
+        return selectedDifficultyName;
+    }
 }

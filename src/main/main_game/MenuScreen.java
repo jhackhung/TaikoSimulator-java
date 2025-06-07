@@ -474,6 +474,7 @@ public class MenuScreen extends StackPane {
 
         try {
             // Update cover art
+//            System.out.println("file:assets/covers/" + songId.replaceAll("\\s+", ""));
             Image coverImage = new Image("file:assets/covers/" + songId.replaceAll("\\s+", "") + ".jpg");
             songCoverArt.setImage(coverImage);
 
