@@ -45,20 +45,20 @@ public class DifficultyScreen extends StackPane {
             Label label = createOutlinedLabel(levels[i], 36, Color.WHITE, Color.BLACK);
             levelLabels[i] = label;
 
-            final int index = i;  // For use in lambda
-            label.setOnMouseClicked(e -> {
-                selected = index;
-                highlight();
-                controller.setSelectedDifficulty(selected);
-                controller.startGameScreen();
-            });
-
-            label.setOnMouseEntered(e -> {
-                if (selected != index) {
-                    selected = index;
-                    highlight();
-                }
-            });
+//            final int index = i;  // For use in lambda
+//            label.setOnMouseClicked(e -> {
+//                selected = index;
+//                highlight();
+//                String difficultyName = levels[selected];
+//                controller.startGameScreen(difficultyName);
+//            });
+//
+//            label.setOnMouseEntered(e -> {
+//                if (selected != index) {
+//                    selected = index;
+//                    highlight();
+//                }
+//            });
 
             vbox.getChildren().add(label);
         }
@@ -85,8 +85,8 @@ public class DifficultyScreen extends StackPane {
                 selected = (selected - 1 + levels.length) % levels.length;
                 highlight();
             } else if (e.getCode() == KeyCode.ENTER) {
-                controller.setSelectedDifficulty(selected);
-                controller.startGameScreen();
+                String difficultyName = levels[selected];
+                controller.startGameScreen(difficultyName);
             } else if (e.getCode() == KeyCode.ESCAPE) {
                 controller.showMenuScreen();
             }

@@ -18,14 +18,18 @@ import javafx.scene.text.Font;
 import javafx.util.Duration;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
 
 public class MenuScreen extends StackPane {
 
     private int selected = 0;
-    private final String[] songs = {"Yoru ni Kakeru", "Zen Zen Zense", "Zenryoku Shounen"};
-    private final String[] artists = {"YOASOBI", "RADWIMPS", "Sukima Switch"};
-    private final StackPane[] songItems = new StackPane[songs.length];
-    private final Label[] songLabels = new Label[songs.length];
+    private final String[] songIds = {"Yoru ni Kakeru", "Zen Zen Zense", "Zenryoku Shounen"};
+    private final Map<String, SongInfo> songInfoMap = new HashMap<>();
+    private final StackPane[] songItems = new StackPane[songIds.length];
+    private final Label[] songLabels = new Label[songIds.length];
     private final String fontPath = "file:assets/fonts/Taiko_No_Tatsujin_Official_Font.ttf";
     private final double itemWidth = 500;
     private AudioClip menuSelectSound;
@@ -36,7 +40,34 @@ public class MenuScreen extends StackPane {
     private MediaPlayer currentPreview;
     private Label previewStatusLabel;
 
+    // 靜態類別用於存儲從TJA檔案讀取的所有歌曲資訊
+    private static class SongInfo {
+        String title;
+        String subtitle;
+        String artist;
+        String wave;
+        double demoStart;
+        int level;
+
+        // 解析SUBTITLE字串以獲取藝術家名稱
+        void parseArtistFromSubtitle() {
+            if (subtitle != null && subtitle.startsWith("--")) {
+                int slashIndex = subtitle.indexOf('/');
+                if (slashIndex > 0) {
+                    artist = subtitle.substring(2, slashIndex).trim();
+                } else {
+                    artist = subtitle.substring(2).trim();
+                }
+            } else {
+                artist = subtitle;
+            }
+        }
+    }
+
     public MenuScreen(MainController controller) {
+        // 預先載入所有歌曲資訊
+        loadAllSongInfo();
+
         // Set up background with a subtle pattern
         ImageView bg = new ImageView(new Image("file:assets/main/menu_bg.jpg"));
         bg.setFitWidth(controller.screenWidth);
@@ -61,35 +92,13 @@ public class MenuScreen extends StackPane {
         songListBox.setAlignment(Pos.CENTER);
 
         // Create song items
-        for (int i = 0; i < songs.length; i++) {
-            StackPane songItem = createSongItem(songs[i], artists[i], i);
+        for (int i = 0; i < songIds.length; i++) {
+            SongInfo info = songInfoMap.get(songIds[i]);
+            String songName = (info != null && info.title != null) ? info.title : songIds[i];
+            String artist = (info != null && info.artist != null) ? info.artist : "Unknown";
+            StackPane songItem = createSongItem(songName, artist, i);
             songItems[i] = songItem;
             songListBox.getChildren().add(songItem);
-
-            // Add click event
-            final int index = i;
-            songItem.setOnMouseClicked(e -> {
-                if (selected != index) {
-                    selected = index;
-                    highlight();
-                    playSelectSound();
-                    previewSong(index);
-                } else if (e.getClickCount() == 2) {
-                    playConfirmSound();
-                    stopPreview();
-                    controller.setSelectedSong(index);
-                    controller.showDifficultyScreen();
-                }
-            });
-
-            songItem.setOnMouseEntered(e -> {
-                if (selected != index) {
-                    selected = index;
-                    highlight();
-                    playSelectSound();
-                    previewSong(index);
-                }
-            });
         }
 
         // Create song preview panel
@@ -117,25 +126,29 @@ public class MenuScreen extends StackPane {
 
         // Initialize selection
         highlight();
-        previewSong(selected); // Start previewing the first song
+
+        // 延遲加載預覽音樂，確保UI先載入完成
+        javafx.application.Platform.runLater(() -> {
+            previewSong(selected);
+        });
 
         // Key input handling
         setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.DOWN || e.getCode() == KeyCode.S) {
-                selected = (selected + 1) % songs.length;
+                selected = (selected + 1) % songIds.length;
                 highlight();
                 playSelectSound();
-                previewSong(selected);
+                previewSong(selected); // 每次選擇後重新播放
             } else if (e.getCode() == KeyCode.UP || e.getCode() == KeyCode.W) {
-                selected = (selected - 1 + songs.length) % songs.length;
+                selected = (selected - 1 + songIds.length) % songIds.length;
                 highlight();
                 playSelectSound();
-                previewSong(selected);
+                previewSong(selected); // 每次選擇後重新播放
             } else if (e.getCode() == KeyCode.ENTER) {
                 playConfirmSound();
                 stopPreview();
-                controller.setSelectedSong(selected);
-                controller.showDifficultyScreen();
+                String selectedSongName = songIds[selected];
+                controller.showDifficultyScreen(selectedSongName);
             } else if (e.getCode() == KeyCode.ESCAPE) {
                 stopPreview();
                 controller.showStartScreen();
@@ -143,6 +156,91 @@ public class MenuScreen extends StackPane {
         });
 
         requestFocus();
+    }
+
+    // 從TJA檔案讀取所有歌曲資訊
+    private void loadAllSongInfo() {
+        for (String songId : songIds) {
+            SongInfo info = loadSongInfoFromTja(songId);
+            if (info != null) {
+                songInfoMap.put(songId, info);
+            }
+        }
+    }
+
+    // 從TJA檔案讀取單個歌曲資訊
+    private SongInfo loadSongInfoFromTja(String songId) {
+        // 尋找對應的 TJA 檔案
+        File tjaFile = findTjaFile(songId);
+        if (tjaFile == null) {
+            System.err.println("TJA file not found for: " + songId);
+            return null;
+        }
+
+        SongInfo info = new SongInfo();
+        info.title = songId; // 預設值
+
+        try (Scanner scanner = new Scanner(tjaFile, "UTF-8")) {
+            // 逐行讀取尋找相關標籤
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine().trim();
+
+                if (line.startsWith("TITLE:")) {
+                    info.title = line.substring("TITLE:".length());
+                } else if (line.startsWith("SUBTITLE:")) {
+                    info.subtitle = line.substring("SUBTITLE:".length());
+                } else if (line.startsWith("WAVE:")) {
+                    info.wave = line.substring("WAVE:".length());
+                    info.wave = info.wave.replace(".ogg", ".wav"); // 確保使用正確的音訊格式
+                } else if (line.startsWith("DEMOSTART:")) {
+                    try {
+                        info.demoStart = Double.parseDouble(line.substring("DEMOSTART:".length()));
+                    } catch (NumberFormatException e) {
+                        System.err.println("Invalid DEMOSTART value in " + songId + ".tja");
+                        info.demoStart = 30.0; // 預設值
+                    }
+                } else if (line.startsWith("COURSE:Oni") || line.startsWith("COURSE:Hard") || line.startsWith("COURSE:Normal")) {
+                    // 讀取下一行尋找難度等級
+                    if (scanner.hasNextLine()) {
+                        String nextLine = scanner.nextLine().trim();
+                        if (nextLine.startsWith("LEVEL:")) {
+                            try {
+                                info.level = Integer.parseInt(nextLine.substring("LEVEL:".length()));
+                            } catch (NumberFormatException e) {
+                                System.err.println("Invalid LEVEL value in " + songId + ".tja");
+                            }
+                            break; // 找到Oni難度後停止尋找
+                        }
+                    }
+                }
+            }
+
+            // 解析藝術家資訊
+            info.parseArtistFromSubtitle();
+
+        } catch (FileNotFoundException e) {
+            System.err.println("Could not read TJA file: " + e.getMessage());
+            return null;
+        }
+
+        return info;
+    }
+
+    // 尋找TJA檔案
+    private File findTjaFile(String songName) {
+        // 首先嘗試直接使用歌曲名稱
+        File file = new File("assets/music/" + songName + ".tja");
+        if (file.exists()) {
+            return file;
+        }
+
+        // 嘗試無空格版本
+        file = new File("assets/music/" + songName.replaceAll("\\s+", "") + ".tja");
+        if (file.exists()) {
+            return file;
+        }
+
+        return null;
     }
 
     private StackPane createSongItem(String songName, String artist, int index) {
@@ -163,12 +261,6 @@ public class MenuScreen extends StackPane {
         artistLabel.setFont(Font.loadFont(fontPath, 18));
         artistLabel.setTextFill(Color.GRAY);
 
-        // Create a note icon
-        ImageView noteIcon = new ImageView(new Image("file:assets/main/note_icon.png"));
-        noteIcon.setFitHeight(30);
-        noteIcon.setFitWidth(30);
-        noteIcon.setTranslateX(-itemWidth/2 + 25);
-
         // Create a container for the text (song name and artist)
         VBox textBox = new VBox(2, label, artistLabel);
         textBox.setAlignment(Pos.CENTER_LEFT);
@@ -176,7 +268,10 @@ public class MenuScreen extends StackPane {
 
         // Create the difficulty stars (just for visual)
         HBox difficultyStars = new HBox(5);
-        for (int i = 0; i < index + 3; i++) {  // More stars for higher index songs
+        SongInfo info = songInfoMap.get(songIds[index]);
+        int level = (info != null) ? info.level : index + 3; // 如果找不到難度，使用索引+3作為預設值
+
+        for (int i = 0; i < level; i++) {  // 使用實際難度作為星星數量
             ImageView star = new ImageView(new Image("file:assets/main/star.png"));
             star.setFitWidth(15);
             star.setFitHeight(15);
@@ -187,19 +282,8 @@ public class MenuScreen extends StackPane {
 
         // Combine everything in a single pane
         StackPane pane = new StackPane();
-        pane.getChildren().addAll(bgRect, noteIcon, textBox, difficultyStars);
+        pane.getChildren().addAll(bgRect, textBox, difficultyStars);
         pane.setMaxWidth(itemWidth);
-
-        // Add hover effects
-        pane.setOnMouseEntered(e -> {
-            bgRect.setFill(Color.rgb(255, 240, 200, 0.9));
-        });
-
-        pane.setOnMouseExited(e -> {
-            if (selected != index) {
-                bgRect.setFill(Color.rgb(240, 240, 240, 0.85));
-            }
-        });
 
         return pane;
     }
@@ -230,7 +314,7 @@ public class MenuScreen extends StackPane {
         songArtistLabel = createOutlinedLabel("", 20, Color.LIGHTGRAY, Color.BLACK);
 
         // Preview status
-        previewStatusLabel = createOutlinedLabel("Preview Playing", 18, Color.WHITE, Color.BLACK);
+        previewStatusLabel = createOutlinedLabel("Preview", 18, Color.WHITE, Color.BLACK);
 
         // Create a stylish preview indicator
         StackPane previewIndicator = new StackPane();
@@ -298,7 +382,7 @@ public class MenuScreen extends StackPane {
         HBox keyControls = new HBox(20);
         keyControls.setAlignment(Pos.CENTER);
 
-        // Individual control instructions
+        // Individual control instructions - 僅保留鍵盤控制說明
         Label upDownLabel = new Label("↑/↓ or W/S: Select Song");
         Label enterLabel = new Label("ENTER: Confirm");
         Label escLabel = new Label("ESC: Back");
@@ -339,7 +423,7 @@ public class MenuScreen extends StackPane {
 
     private void highlight() {
         // Update song items appearance
-        for (int i = 0; i < songs.length; i++) {
+        for (int i = 0; i < songIds.length; i++) {
             Rectangle bgRect = (Rectangle) songItems[i].getChildren().get(0);
 
             if (i == selected) {
@@ -381,14 +465,22 @@ public class MenuScreen extends StackPane {
     }
 
     private void updateSongPreview(int index) {
+        String songId = songIds[index];
+        SongInfo info = songInfoMap.get(songId);
+
+        if (info == null) {
+            return;
+        }
+
         try {
             // Update cover art
-            Image coverImage = new Image("file:assets/covers/" + songs[index].replaceAll("\\s+", "") + ".jpg");
+//            System.out.println("file:assets/covers/" + songId.replaceAll("\\s+", ""));
+            Image coverImage = new Image("file:assets/covers/" + songId.replaceAll("\\s+", "") + ".jpg");
             songCoverArt.setImage(coverImage);
 
             // Update song info
-            songInfoLabel.setText(songs[index]);
-            songArtistLabel.setText(artists[index]);
+            songInfoLabel.setText(info.title);
+            songArtistLabel.setText(info.artist);
 
         } catch (Exception e) {
             System.err.println("Could not load cover art: " + e.getMessage());
@@ -402,67 +494,125 @@ public class MenuScreen extends StackPane {
         }
     }
 
-    private void previewSong(int index) {
-        stopPreview(); // Stop any currently playing preview
+    private synchronized void previewSong(int index) {
+        stopPreview(); // 確保先停止當前播放的預覽
+
+        // 從先前讀取的資訊獲取預覽時間
+        SongInfo info = songInfoMap.get(songIds[index]);
+        if (info == null) {
+            return;
+        }
 
         try {
-//            String songFileName = songs[index].replaceAll("\\s+", "") + ".wav";
-            String songFileName = songs[index] + ".wav";
-            String previewPath = "assets/music/" + songFileName;
+            // 使用TJA檔中指定的音訊檔案
+            String audioFileName = info.wave;
+            if (audioFileName == null || audioFileName.isEmpty()) {
+                audioFileName = songIds[index] + ".wav"; // 預設檔案名
+            }
 
-            File audioFile = new File(previewPath);
+            File audioFile = new File("assets/music/" + audioFileName);
             if (!audioFile.exists()) {
-                System.err.println("Preview file not found: " + previewPath);
+                System.err.println("Preview file not found: " + audioFile.getPath());
                 return;
             }
 
+            // 建立媒體播放器並設定
             Media media = new Media(audioFile.toURI().toString());
             currentPreview = new MediaPlayer(media);
 
-            // Set the start position (e.g., 30 seconds into the song)
-            currentPreview.setStartTime(Duration.seconds(30));
+            currentPreview.setVolume(0.0);
 
-            // Set the stop time (e.g., play for 15 seconds)
-            currentPreview.setStopTime(Duration.seconds(45));
+            // 設定播放器事件處理
+            currentPreview.setOnReady(() -> {
+                // 使用從TJA檔案讀取的DEMOSTART值
+                double startTime = info.demoStart;
+                if (startTime <= 0) {
+                    startTime = Math.min(30, currentPreview.getMedia().getDuration().toSeconds() * 0.3);
+                }
 
-            // Set volume
-            currentPreview.setVolume(0.5);
+                double endTime = Math.min(startTime + 15, currentPreview.getMedia().getDuration().toSeconds() * 0.9);
 
-            // Start playing
-            currentPreview.play();
+                currentPreview.setStartTime(Duration.seconds(startTime));
+                currentPreview.setStopTime(Duration.seconds(endTime));
 
-            // Update the preview status
-            previewStatusLabel.setText("▶ Now Playing");
+                // 設定音量和開始播放
+                currentPreview.play();
+                previewStatusLabel.setAlignment(Pos.CENTER);
+                previewStatusLabel.setText("Now Playing");
 
-            // Add a fade-in effect
-            currentPreview.setVolume(0);
-            Timeline fadeIn = new Timeline(
-                    new KeyFrame(Duration.ZERO, new KeyValue(currentPreview.volumeProperty(), 0)),
-                    new KeyFrame(Duration.seconds(1), new KeyValue(currentPreview.volumeProperty(), 0.5))
-            );
-            fadeIn.play();
+                // 使用 MediaPlayer 的監聽器逐步提高音量，而非 Timeline
+                animateVolume(currentPreview, 0.0, 0.5, 800);
+            });
+
+            // 設定錯誤處理
+            currentPreview.setOnError(() -> {
+                System.err.println("Error playing preview: " + currentPreview.getError().getMessage());
+                previewStatusLabel.setText("Preview Error");
+                currentPreview = null;
+            });
+
+            // 設定播放結束後的處理
+            currentPreview.setOnEndOfMedia(() -> {
+                // 循環播放預覽
+                currentPreview.seek(currentPreview.getStartTime());
+                currentPreview.play();
+            });
 
         } catch (Exception e) {
             System.err.println("Could not play preview: " + e.getMessage());
+            e.printStackTrace();
             previewStatusLabel.setText("Preview Unavailable");
         }
     }
 
-    private void stopPreview() {
-        if (currentPreview != null) {
-            // Fade out and then stop
-            Timeline fadeOut = new Timeline(
-                    new KeyFrame(Duration.ZERO, new KeyValue(currentPreview.volumeProperty(), currentPreview.getVolume())),
-                    new KeyFrame(Duration.millis(300), new KeyValue(currentPreview.volumeProperty(), 0))
-            );
-            fadeOut.setOnFinished(e -> {
-                currentPreview.stop();
-                currentPreview.dispose();
-                currentPreview = null;
-            });
-            fadeOut.play();
+    private void animateVolume(MediaPlayer player, double startVolume, double endVolume, int durationMs) {
+        if (player == null) return;
 
-            previewStatusLabel.setText("Preview");
+        final int steps = 20;
+        final int stepTime = durationMs / steps;
+        final double volumeStep = (endVolume - startVolume) / steps;
+
+        Thread volumeThread = new Thread(() -> {
+            try {
+                player.setVolume(startVolume);
+                for (int i = 1; i <= steps; i++) {
+                    Thread.sleep(stepTime);
+                    final double newVolume = startVolume + (volumeStep * i);
+
+                    javafx.application.Platform.runLater(() -> {
+                        try {
+                            // 判斷傳入的 player 是否還活著
+                            if (player.getStatus() != MediaPlayer.Status.DISPOSED) {
+                                player.setVolume(newVolume);
+                            }
+                        } catch (Exception e) {
+//                            e.printStackTrace();
+                        }
+                    });
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        volumeThread.setDaemon(true);
+        volumeThread.start();
+    }
+
+    private synchronized void stopPreview() {
+        if (currentPreview != null && currentPreview.getStatus() != MediaPlayer.Status.DISPOSED) {
+            try {
+                MediaPlayer playerToStop = currentPreview;
+                currentPreview = null; // 立即清除引用，避免後續操作
+
+                // 避免使用 Timeline，改為直接停止
+//                playerToStop.setVolume(0);
+                playerToStop.stop();
+                playerToStop.dispose();
+                previewStatusLabel.setText("Preview");
+            } catch(Exception e) {
+                System.err.println("Error in stopPreview: " + e.getMessage());
+            }
         }
     }
 

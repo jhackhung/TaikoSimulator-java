@@ -9,8 +9,8 @@ import main.main_game.MainController;
 public class Main extends Application {
 //    @Override
 //    public void start(Stage primaryStage) {
-//        String tjaPath = "assets/music/Zenryoku Shounen.tja";
-//        String musicPath = "assets/music/Zenryoku Shounen.wav";
+//        String tjaPath = "assets/music/Yoru ni Kakeru.tja";
+//        String musicPath = "assets/music/Yoru ni Kakeru.wav";
 //        String course = "Normal";
 //
 //        GameEngine engine = new GameEngine(tjaPath, musicPath, course);
